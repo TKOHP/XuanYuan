@@ -74,7 +74,7 @@ def run_eval(model, tokenizer, eval, args):
 
     args.save_dir = f"{args.save_dir}_{args.num_few_shot}_shot"
     if not os.path.exists(args.save_dir):
-        os.mkdir(args.save_dir)
+        os.makedirs(args.save_dir)
 
     for i, subject in enumerate(subjects):
         print(f'Evaluating {i+1}/{len(subjects)} {subject}')

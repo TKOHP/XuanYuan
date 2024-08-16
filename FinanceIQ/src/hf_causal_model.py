@@ -8,6 +8,7 @@ from utils import choices, format_example, gen_prompt, run_eval
 
 from peft import PeftModel
 from transformers import LlamaForCausalLM, LlamaTokenizer, AutoModelForCausalLM, AutoTokenizer, AutoModel
+# from transformers import AutoModelForCausalLM, AutoTokenizer, AutoModel
 from transformers.generation.utils import GenerationConfig
 
 def eval(model, tokenizer, subject, dev_df, test_df, num_few_shot, max_length, cot):
@@ -26,16 +27,23 @@ def eval(model, tokenizer, subject, dev_df, test_df, num_few_shot, max_length, c
 
         with torch.no_grad():
             if is_chat_history:
-                pred, history = model.chat(tokenizer, prompt, history=[]) # for ChatGLM and InternLM-Chat
+                # print(prompt)
+                eos_token_id = tokenizer.eos_token_id
+                other = {"eos_token_id": eos_token_id}
+                pred, history = model.chat(tokenizer, prompt, history=[],**other) # for ChatGLM and InternLM-Chat
             else:
                 if is_chat_model:
                     messages = [{"role": "user", "content": prompt}]
                     pred = model.chat(tokenizer, messages) # for model with model.chat() function, e.g. Baichuan-13B-Chat
+
                 else:
                     inputs = tokenizer(prompt, return_tensors="pt").to("cuda")
                     outputs = model.generate(**inputs, max_new_tokens=512, repetition_penalty=1.1)
                     pred = tokenizer.decode(outputs.cpu()[0][len(inputs.input_ids[0]):], skip_special_tokens=True)
-
+        print(f"prompt:{i}")
+        print(prompt)
+        print("pred:")
+        print(pred)
         all_preds.append(pred.replace("\n", ""))
         if pred and pred[0] in choices:
             cors.append(pred[0] == label)
@@ -48,12 +56,15 @@ def eval(model, tokenizer, subject, dev_df, test_df, num_few_shot, max_length, c
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_name_or_path", type=str, default="")
-    parser.add_argument("--lora_weights", type=str, default="")
+    # "/root/data/sae/LLMmodel/base_models/chatglm"
+    # parser.add_argument("--model_name_or_path", type=str, default="/root/data/sae/LLMmodel/base_models/chatglm2-6b")
+    parser.add_argument("--model_name_or_path", type=str, default="/root/data/sae/LLMmodel/base_models/chatglm")
+    # parser.add_argument("--lora_weights", type=str, default="/root/data/sae/LLMmodel/FinGPT_v31_ChatGLM2_Sentiment_Instruction_LoRA_FT")
+    parser.add_argument("--lora_weights", type=str,default="/root/data/sae/LLMmodel/fingpt-mt_chatglm2-6b_lora")
     parser.add_argument("--data_dir", type=str, default="../data")
-    parser.add_argument("--save_dir", type=str, default="../results/not_specified")
+    parser.add_argument("--save_dir", type=str, default="../results/FinGPT_v31")
     parser.add_argument("--num_few_shot", type=int, default=0)
-    parser.add_argument("--max_length", type=int, default=2048)
+    parser.add_argument("--max_length", type=int, default=512)
     parser.add_argument("--load_in_8bit", action='store_true')
     parser.add_argument("--with_conf", action='store_true')
     parser.add_argument("--cot", action='store_true')
@@ -88,22 +99,22 @@ if __name__ == "__main__":
     tic = time.time()
     tokenizer = tokenizer_class.from_pretrained(args.model_name_or_path, trust_remote_code=True)
     model = model_class.from_pretrained(args.model_name_or_path,
-                                        trust_remote_code=True,
-                                        load_in_8bit=args.load_in_8bit,
-                                        device_map="auto"
+                                        trust_remote_code=True,load_in_8bit=args.load_in_8bit,device_map="auto"
                                         )
     if is_chatglm:
-        model = model.half().cuda()  # For ChatGLM
+        pass
+        # model = model.half()  # For ChatGLM
     if is_chat_model and not is_chatglm:
         model.generation_config = GenerationConfig.from_pretrained(args.model_name_or_path)
     print(model.generation_config)
+    print(tokenizer)
     print(f'loaded model: {args.model_name_or_path}  costtime = {time.time()-tic:2f}s')
     
     if args.lora_weights != "":
         model = PeftModel.from_pretrained(
                         model,
                         args.lora_weights,
-                        torch_dtype=torch.float16,
+                        # torch_dtype=torch.float16,
                         )
-        
+    print(model)
     run_eval(model, tokenizer, eval, args)

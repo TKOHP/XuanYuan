@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="1d0c9234-65c5-4e09-bba0-979aed74000e" name="xuanyuan">
+        <fileTransfer rootFolder="/root/data/sae/mxl_project/" accessType="SFTP" host="zhy1.dc.houdeyun.cn" port="54370" sshConfigId="dfabfb70-a31d-4e97-9f86-187a16374bd6" sshConfig="sae@zhy1.dc.houdeyun.cn:54370 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
